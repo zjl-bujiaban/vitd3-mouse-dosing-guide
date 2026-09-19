@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>VitD3小鼠血管钙化给药核对与计算器</title>
+  <meta name="description" content="C57BL/6小鼠VitD3血管钙化模型配制记录、体重换算和文献依据。">
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <style>
+    :root {
+      --ink: #17211b;
+      --muted: #5e6962;
+      --line: #d7ded9;
+      --paper: #ffffff;
+      --canvas: #f4f6f3;
+      --forest: #176b4a;
+      --forest-soft: #e7f2ec;
+      --amber: #9c5b00;
+      --amber-soft: #fff3d8;
+      --red: #9f2d2d;
+      --red-soft: #fff0ee;
+      --blue: #225ea8;
+      --shadow: 0 8px 24px rgba(25, 38, 30, 0.07);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--canvas);
+      font-family: Inter, "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+      line-height: 1.58;
+      letter-spacing: 0;
+    }
+
+    button, input, select { font: inherit; }
+    a { color: var(--blue); }
+
+    .topbar {
+      background: #163f31;
+      color: #fff;
+      border-bottom: 4px solid #e2b84e;
+    }
+
+    .topbar-inner, main, footer {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    .topbar-inner {
+      min-height: 106px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 20px 0;
+    }
+
+    .identity { display: flex; align-items: center; gap: 14px; }
+    .identity-icon {
+      width: 46px;
+      height: 46px;
+      display: grid;
+      place-items: center;
+      color: #163f31;
+      background: #f4d47b;
+      border-radius: 6px;
+      flex: 0 0 auto;
+    }
+    h1 { margin: 0; font-size: 25px; line-height: 1.25; font-weight: 750; }
+    .subtitle { margin: 5px 0 0; color: #d8e8df; font-size: 14px; }
+    .updated { color: #f5df9f; font-size: 13px; white-space: nowrap; }
+
+    main { padding: 28px 0 46px; }
+    .notice {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 12px;
+      padding: 15px 17px;
+      background: var(--amber-soft);
+      border: 1px solid #ebcf8d;
+      border-left: 5px solid #d58a12;
+      border-radius: 6px;
+      margin-bottom: 22px;
+    }
+    .notice strong { display: block; margin-bottom: 3px; }
+    .notice p { margin: 0; color: #654410; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.08fr) minmax(330px, 0.92fr);
+      gap: 20px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+    .panel-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 15px 18px;
+      border-bottom: 1px solid var(--line);
+      background: #fbfcfb;
+    }
+    .panel-header h2 { margin: 0; font-size: 18px; }
+    .panel-body { padding: 18px; }
+
+    .formula {
+      padding: 15px;
+      background: var(--forest-soft);
+      border-left: 4px solid var(--forest);
+      border-radius: 4px;
+      font-variant-numeric: tabular-nums;
+    }
+    .formula strong { color: #0f5439; }
+
+    .steps { margin: 16px 0 0; padding: 0; list-style: none; counter-reset: step; }
+    .steps li {
+      counter-increment: step;
+      display: grid;
+      grid-template-columns: 30px 1fr;
+      gap: 10px;
+      padding: 11px 0;
+      border-bottom: 1px solid #edf0ee;
+    }
+    .steps li:last-child { border-bottom: 0; }
+    .steps li::before {
+      content: counter(step);
+      width: 26px;
+      height: 26px;
+      display: grid;
+      place-items: center;
+      background: #173f31;
+      color: #fff;
+      border-radius: 50%;
+      font-weight: 700;
+      font-size: 13px;
+    }
+    .steps b { color: #173f31; }
+
+    .correction {
+      margin-top: 15px;
+      padding: 13px 14px;
+      color: #6d2525;
+      background: var(--red-soft);
+      border: 1px solid #efc3bd;
+      border-radius: 5px;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 13px;
+    }
+    label { display: block; color: var(--muted); font-size: 13px; font-weight: 650; }
+    input, select {
+      width: 100%;
+      margin-top: 5px;
+      padding: 10px 11px;
+      color: var(--ink);
+      background: #fff;
+      border: 1px solid #bfc9c2;
+      border-radius: 5px;
+      outline: none;
+    }
+    input:focus, select:focus { border-color: var(--forest); box-shadow: 0 0 0 3px rgba(23, 107, 74, .12); }
+
+    .results {
+      margin-top: 16px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .result {
+      min-height: 104px;
+      padding: 15px;
+      background: #fbfcfb;
+      border-right: 1px solid var(--line);
+    }
+    .result:last-child { border-right: 0; }
+    .result span { display: block; color: var(--muted); font-size: 13px; }
+    .result strong { display: block; margin-top: 6px; color: var(--forest); font-size: 28px; line-height: 1.2; }
+    .result small { color: var(--muted); }
+
+    .equation {
+      margin-top: 13px;
+      padding: 10px 12px;
+      background: #f7f9f7;
+      border: 1px dashed #bdc9c1;
+      border-radius: 5px;
+      color: #425048;
+      font-family: Consolas, "SFMono-Regular", monospace;
+      font-size: 13px;
+      overflow-wrap: anywhere;
+    }
+
+    .checklist { padding: 0; margin: 0; list-style: none; }
+    .checklist li {
+      display: grid;
+      grid-template-columns: 20px 1fr;
+      gap: 9px;
+      padding: 8px 0;
+      border-bottom: 1px solid #edf0ee;
+    }
+    .checklist li:last-child { border-bottom: 0; }
+    .checklist svg { margin-top: 3px; color: var(--forest); }
+
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 540px; font-size: 14px; }
+    th, td { padding: 10px 11px; border-bottom: 1px solid var(--line); text-align: left; }
+    th { background: #f2f5f3; color: #35423a; }
+    td:nth-child(n+2), th:nth-child(n+2) { text-align: right; font-variant-numeric: tabular-nums; }
+
+    .refs a {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid #edf0ee;
+      text-decoration: none;
+    }
+    .refs a:last-child { border-bottom: 0; }
+    .refs strong { display: block; color: var(--ink); }
+    .refs span { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; }
+    .refs svg { color: var(--blue); margin-top: 3px; }
+
+    footer { padding: 22px 0 34px; color: var(--muted); font-size: 13px; }
+
+    @media (max-width: 820px) {
+      .topbar-inner { align-items: flex-start; flex-direction: column; gap: 8px; }
+      .layout { grid-template-columns: 1fr; }
+      h1 { font-size: 21px; }
+    }
+    @media (max-width: 520px) {
+      .topbar-inner, main, footer { width: min(100% - 20px, 1120px); }
+      .controls, .results { grid-template-columns: 1fr; }
+      .result { border-right: 0; border-bottom: 1px solid var(--line); }
+      .result:last-child { border-bottom: 0; }
+      .panel-body { padding: 15px; }
+      .identity-icon { width: 40px; height: 40px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="identity">
+        <div class="identity-icon"><i data-lucide="flask-conical" aria-hidden="true"></i></div>
+        <div>
+          <h1>VitD3小鼠血管钙化给药核对与计算器</h1>
+          <p class="subtitle">C57BL/6龄期模型·高剂量维生素D3·皮下注射文献配方</p>
+        </div>
+      </div>
+      <div class="updated">2025-11-25方案·2026-09-19核对</div>
+    </div>
+  </header>
+
+  <main>
+    <div class="notice">
+      <i data-lucide="triangle-alert" aria-hidden="true"></i>
+      <div>
+        <strong>高剂量动物给药提示</strong>
+        <p>本页用于记录和数学核对，不替代本单位已批准的动物伦理方案、兽医指导或试剂说明书。必须按当日实际体重换算，不应将所有小鼠固定按25 g给药。</p>
+      </div>
+    </div>
+
+    <div class="layout">
+      <section>
+        <article class="panel">
+          <div class="panel-header"><i data-lucide="beaker" aria-hidden="true"></i><h2>文献配方与你的记录</h2></div>
+          <div class="panel-body">
+            <div class="formula">
+              <strong>标称总效价：</strong>14.575 mg × 40,000 IU/mg = 583,000 IU<br>
+              <strong>若终体积定容至7.00 mL：</strong>583,000 IU ÷ 7.00 mL = 83,285.7 IU/mL
+            </div>
+
+            <ol class="steps">
+              <li><div><b>管1：</b>14.575 mg维生素D3 + 70 µL无水乙醇，再加500 µL Cremophor/聚氧乙烯蓖麻油；室温混合15 min。</div></li>
+              <li><div><b>管2：</b>250 mg葡萄糖溶于6.2 mL无菌注射用水。文献中不是只写“双蒸水”而不记体积。</div></li>
+              <li><div><b>合并：</b>将两部分按已批准方案充分混合。用于精确计算时，应将“终体积7.00 mL”作为定容条件，而不是默认各体积简单相加必然等于7 mL。</div></li>
+            </ol>
+
+            <div class="correction">
+              <strong>你原记录的关键缺口：</strong>必须补写“250 mg葡萄糖溶于6.2 mL无菌注射用水”和最终定容条件。另外，40,000 IU/mg必须与当批试剂COA/标签一致。
+            </div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-header"><i data-lucide="table-2" aria-hidden="true"></i><h2>25 g小鼠的数学核对</h2></div>
+          <div class="panel-body table-wrap">
+            <table>
+              <thead><tr><th>目标剂量</th><th>每克体重</th><th>25 g所需IU</th><th>25 g注射体积</th><th>20只理论总量</th></tr></thead>
+              <tbody>
+                <tr><td>5 × 10<sup>5</sup> IU/kg</td><td>6.003 µL/g</td><td>12,500 IU</td><td>150.08 µL</td><td>3.002 mL</td></tr>
+                <tr><td>6 × 10<sup>5</sup> IU/kg</td><td>7.203 µL/g</td><td>15,000 IU</td><td>180.08 µL</td><td>3.602 mL</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <aside>
+        <article class="panel">
+          <div class="panel-header"><i data-lucide="calculator" aria-hidden="true"></i><h2>按实际体重计算</h2></div>
+          <div class="panel-body">
+            <div class="controls">
+              <label>当日体重（g）
+                <input id="weight" type="number" min="10" max="45" step="0.1" value="25">
+              </label>
+              <label>目标剂量（IU/kg）
+                <select id="dose">
+                  <option value="500000">5 × 10⁵</option>
+                  <option value="600000">6 × 10⁵</option>
+                </select>
+              </label>
+              <label>动物数量（只）
+                <input id="count" type="number" min="1" max="200" step="1" value="20">
+              </label>
+              <label>配制损耗余量（%）
+                <input id="overage" type="number" min="0" max="30" step="1" value="10">
+              </label>
+            </div>
+
+            <div class="results" aria-live="polite">
+              <div class="result"><span>每只注射体积</span><strong id="perMouse">150.1 µL</strong><small>不含损耗余量</small></div>
+              <div class="result"><span>建议准备总体积</span><strong id="totalVolume">3.302 mL</strong><small id="totalNote">20只，含10%损耗</small></div>
+            </div>
+            <div class="equation" id="equation"></div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-header"><i data-lucide="clipboard-check" aria-hidden="true"></i><h2>给药前核对</h2></div>
+          <div class="panel-body">
+            <ul class="checklist">
+              <li><i data-lucide="check" aria-hidden="true"></i><span>核对当批VitD3效价，不盲目沿用40,000 IU/mg。</span></li>
+              <li><i data-lucide="check" aria-hidden="true"></i><span>每次给药前称重，按每只实际体重独立换算。</span></li>
+              <li><i data-lucide="check" aria-hidden="true"></i><span>核对终体积、溶液均一性、无菌条件及试剂级别。</span></li>
+              <li><i data-lucide="check" aria-hidden="true"></i><span>记录给药时间、实际体积、注射部位及每日健康监测。</span></li>
+              <li><i data-lucide="check" aria-hidden="true"></i><span>出现明显脱水、活动减少、快速掉重等情况时，按伦理方案的人道终点处理。</span></li>
+            </ul>
+          </div>
+        </article>
+      </aside>
+    </div>
+
+    <article class="panel refs">
+      <div class="panel-header"><i data-lucide="book-open" aria-hidden="true"></i><h2>配方与模型文献</h2></div>
+      <div class="panel-body">
+        <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC12598240/" target="_blank" rel="noopener"><div><strong>C57BL/6J小鼠高剂量VitD3配方</strong><span>14.575 mg VitD3、70 µL乙醇、500 µL蓖麻油制剂、6.2 mL无菌水；500,000 IU/kg皮下注射3天。</span></div><i data-lucide="external-link" aria-hidden="true"></i></a>
+        <a href="https://www.nature.com/articles/s12276-022-00909-7" target="_blank" rel="noopener"><div><strong>Cdon与VitD3血管钙化模型</strong><span>8或10周龄C57BL/6雄鼠，文献明确记录250 mg dextrose及150 µL/25 g/day。</span></div><i data-lucide="external-link" aria-hidden="true"></i></a>
+        <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC11550308/" target="_blank" rel="noopener"><div><strong>Dapagliflozin与非CKD血管钙化模型</strong><span>VitD3 5 × 10⁵ IU/kg，每日1次，连续3天。</span></div><i data-lucide="external-link" aria-hidden="true"></i></a>
+      </div>
+    </article>
+  </main>
+
+  <footer>
+    计算默认浓度83,285.7 IU/mL。任何批号、效价、终体积或伦理方案变更后，必须重新计算。
+  </footer>
+
+  <script>
+    const concentration = 83285.7;
+    const fields = ["weight", "dose", "count", "overage"].map(id => document.getElementById(id));
+
+    function updateCalculator() {
+      const weight = Math.max(0, Number(document.getElementById("weight").value) || 0);
+      const dose = Math.max(0, Number(document.getElementById("dose").value) || 0);
+      const count = Math.max(0, Number(document.getElementById("count").value) || 0);
+      const overage = Math.max(0, Number(document.getElementById("overage").value) || 0);
+      const iu = dose * weight / 1000;
+      const perMouseUl = iu / concentration * 1000;
+      const totalMl = perMouseUl * count / 1000 * (1 + overage / 100);
+
+      document.getElementById("perMouse").textContent = `${perMouseUl.toFixed(1)} µL`;
+      document.getElementById("totalVolume").textContent = `${totalMl.toFixed(3)} mL`;
+      document.getElementById("totalNote").textContent = `${count}只，含${overage}%损耗`;
+      document.getElementById("equation").textContent =
+        `(${dose.toLocaleString()} IU/kg × ${(weight / 1000).toFixed(4)} kg) ÷ ${concentration.toLocaleString()} IU/mL = ${perMouseUl.toFixed(1)} µL/只`;
+    }
+
+    fields.forEach(field => field.addEventListener("input", updateCalculator));
+    updateCalculator();
+    if (window.lucide) window.lucide.createIcons({ attrs: { width: 20, height: 20, "stroke-width": 1.8 } });
+  </script>
+</body>
+</html>
